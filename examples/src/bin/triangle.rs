@@ -24,7 +24,7 @@ use vulkano::image::SwapchainImage;
 use vulkano::instance::{Instance, PhysicalDevice};
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::pipeline::viewport::Viewport;
-use vulkano::swapchain::{AcquireError, PresentMode, SurfaceTransform, Swapchain, SwapchainCreationError, ColorSpace, FullscreenExclusive};
+use vulkano::swapchain::{AcquireError, SwapchainBuilder, SwapchainCreationError};
 use vulkano::swapchain;
 use vulkano::sync::{GpuFuture, FlushError};
 use vulkano::sync;
@@ -153,10 +153,15 @@ fn main() {
         let dimensions: [u32; 2] = surface.window().inner_size().into();
 
         // Please take a look at the docs for the meaning of the parameters we didn't mention.
-        Swapchain::new(device.clone(), surface.clone(), caps.min_image_count, format,
-            dimensions, 1, usage, &queue, SurfaceTransform::Identity, alpha,
-            PresentMode::Fifo, FullscreenExclusive::Default, true, ColorSpace::SrgbNonLinear).unwrap()
-
+        SwapchainBuilder::new(device.clone(), surface.clone())
+            .num_images(caps.min_image_count)
+            .format(format)
+            .dimensions(Some(dimensions))
+            .usage(usage)
+            .sharing(&queue)
+            .alpha(alpha)
+            .build()
+            .unwrap()
     };
 
     // We now create a buffer that will store the shape of our triangle.
@@ -324,7 +329,9 @@ fn main() {
                 if recreate_swapchain {
                     // Get the new dimensions of the window.
                     let dimensions: [u32; 2] = surface.window().inner_size().into();
-                    let (new_swapchain, new_images) = match swapchain.recreate_with_dimensions(dimensions) {
+                    let (new_swapchain, new_images) = match SwapchainBuilder::from_existing(swapchain.clone())
+                        .dimensions(Some(dimensions))
+                        .build() {
                         Ok(r) => r,
                         // This error tends to happen when the user is manually resizing the window.
                         // Simply restarting the loop is the easiest way to fix this issue.
